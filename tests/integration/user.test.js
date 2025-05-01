@@ -16,9 +16,10 @@ describe('User routes', () => {
     beforeEach(() => {
       newUser = {
         name: faker.name.findName(),
+        username: faker.name.findName(),
         email: faker.internet.email().toLowerCase(),
         password: 'password1',
-        role: 'user',
+        role: 'student',
       };
     });
 
@@ -35,6 +36,7 @@ describe('User routes', () => {
       expect(res.body).toEqual({
         id: expect.anything(),
         name: newUser.name,
+        username: newUser.username,
         email: newUser.email,
         role: newUser.role,
         isEmailVerified: false,
@@ -43,7 +45,13 @@ describe('User routes', () => {
       const dbUser = await User.findById(res.body.id);
       expect(dbUser).toBeDefined();
       expect(dbUser.password).not.toBe(newUser.password);
-      expect(dbUser).toMatchObject({ name: newUser.name, email: newUser.email, role: newUser.role, isEmailVerified: false });
+      expect(dbUser).toMatchObject({
+        name: newUser.name,
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        isEmailVerified: false,
+      });
     });
 
     test('should be able to create an admin as well', async () => {
