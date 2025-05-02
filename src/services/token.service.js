@@ -47,7 +47,7 @@ const saveToken = async (token, userId, expires, type, blacklisted = false) => {
 
 /**
  * Verify token and return token doc (or throw an error if it is not valid)
- * @param {string} token
+ * @param {ResponseCookie} token
  * @param {string} type
  * @returns {Promise<Token>}
  */
@@ -113,6 +113,31 @@ const generateVerifyEmailToken = async (user) => {
   return verifyEmailToken;
 };
 
+const generateAuthCookies = async (tokens) => {
+  return {
+    accessToken: {
+      name: 'accessToken',
+      value: tokens.access.token,
+      options: {
+        httpOnly: true,
+        secure: config.env === 'production',
+        sameSite: 'Strict',
+        maxAge: 60 * 1000, // 1 minute
+      },
+    },
+    refreshToken: {
+      name: 'refreshToken',
+      value: tokens.refresh.token,
+      options: {
+        httpOnly: true,
+        secure: config.env === 'production',
+        sameSite: 'Strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      },
+    },
+  };
+};
+
 module.exports = {
   generateToken,
   saveToken,
@@ -120,4 +145,5 @@ module.exports = {
   generateAuthTokens,
   generateResetPasswordToken,
   generateVerifyEmailToken,
+  generateAuthCookies,
 };
