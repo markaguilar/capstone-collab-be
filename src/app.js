@@ -22,6 +22,28 @@ if (config.env !== 'test') {
   app.use(morgan.errorHandler);
 }
 
+// enable cors
+const allowedOrigins = [
+  'http://localhost:5173',
+  config.frontendUrl, // from your config.js or .env
+];
+
+app.use(
+  cors({
+    function(origin, callback) {
+      // Allow requests with no origin (e.g., curl, mobile apps)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true, // Allow cookies/auth headers
+  })
+);
+
+app.options('*', cors());
+
 app.use(cookieParser());
 
 // set security HTTP headers
@@ -39,10 +61,6 @@ app.use(mongoSanitize());
 
 // gzip compression
 app.use(compression());
-
-// enable cors
-app.use(cors());
-app.options('*', cors());
 
 // jwt authentication
 app.use(passport.initialize());

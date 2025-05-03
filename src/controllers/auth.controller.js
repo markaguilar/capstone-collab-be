@@ -12,16 +12,11 @@ const login = catchAsync(async (req, res) => {
   const { email, password } = req.body;
   const user = await authService.loginUserWithEmailAndPassword(email, password);
   const tokens = await tokenService.generateAuthTokens(user);
-  // Set access token in HttpOnly cookie
-  res.cookie('accessToken', tokens.access.token, {
-    httpOnly: true,
-    secure: false, // 🔐 set true in production
-    sameSite: 'Strict',
-    maxAge: 60 * 1000, // 1 min
-    //  maxAge: 24 * 60 * 60 * 1000, // 1 day
-  });
+  const cookies = await tokenService.generateAuthCookies(tokens);
 
-  // Optional: you can also set refresh token in HttpOnly cookie if using refresh flows
+  res.cookie(cookies.accessToken.name, cookies.accessToken.value, cookies.accessToken.options);
+  res.cookie(cookies.refreshToken.name, cookies.refreshToken.value, cookies.refreshToken.options);
+
   res.send({ user, tokens });
 });
 
@@ -31,23 +26,12 @@ const logout = catchAsync(async (req, res) => {
 });
 
 const refreshTokens = catchAsync(async (req, res) => {
-  const tokens = await authService.refreshAuth(req.body.refreshToken);
-  // Set access token in HttpOnly cookie
-  res.cookie('accessToken', tokens.access.token, {
-    httpOnly: true,
-    secure: false, // 🔐 set true in production
-    sameSite: 'Strict',
-    maxAge: 60 * 1000, // 1 min
-    //  maxAge: 24 * 60 * 60 * 1000, // 1 day
-  });
+  const tokens = await authService.refreshAuth(req.cookies.refreshToken);
+  const cookies = await tokenService.generateAuthCookies(tokens);
 
-  // Optional: you can also set refresh token in HttpOnly cookie if using refresh flows
-  // res.cookie('refreshToken', tokens.refresh.token, {
-  //   httpOnly: true,
-  //   secure: false,
-  //   sameSite: 'Strict',
-  //   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  // });
+  res.cookie(cookies.accessToken.name, cookies.accessToken.value, cookies.accessToken.options);
+  res.cookie(cookies.refreshToken.name, cookies.refreshToken.value, cookies.refreshToken.options);
+
   res.send({ ...tokens });
 });
 
