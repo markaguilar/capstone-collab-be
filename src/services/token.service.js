@@ -113,7 +113,7 @@ const generateVerifyEmailToken = async (user) => {
   return verifyEmailToken;
 };
 
-const generateAuthCookies = async (tokens) => {
+const generateAuthCookies = async (tokens, rememberMe) => {
   return {
     accessToken: {
       name: 'accessToken',
@@ -132,7 +132,7 @@ const generateAuthCookies = async (tokens) => {
         httpOnly: true,
         secure: config.env === 'production',
         sameSite: 'Strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 0,
       },
     },
   };
