@@ -9,10 +9,10 @@ const register = catchAsync(async (req, res) => {
 });
 
 const login = catchAsync(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, rememberMe } = req.body;
   const user = await authService.loginUserWithEmailAndPassword(email, password);
   const tokens = await tokenService.generateAuthTokens(user);
-  const cookies = await tokenService.generateAuthCookies(tokens);
+  const cookies = await tokenService.generateAuthCookies(tokens, rememberMe);
 
   res.cookie(cookies.accessToken.name, cookies.accessToken.value, cookies.accessToken.options);
   res.cookie(cookies.refreshToken.name, cookies.refreshToken.value, cookies.refreshToken.options);
