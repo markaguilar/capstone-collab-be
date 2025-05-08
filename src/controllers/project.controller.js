@@ -12,12 +12,7 @@ const createProject = catchAsync(async (req, res) => {
 });
 
 const getProjects = catchAsync(async (req, res) => {
-  const user = await userService.getUserById(req.user.id);
-  if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
-  }
-
-  const filter = { student: user.id, ...pick(req.query, ['title']) };
+  const filter = { student: req.user.id, ...pick(req.query, ['title']) };
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
 
   const result = await projectService.queryProjects(filter, options);
@@ -31,17 +26,9 @@ const getProject = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  const project = await projectService.getProjectById(req.params.projectId);
-  const proposal = await proposalService.getProposalsByProjectId(req.params.projectId);
-  if (!project) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Project not found');
-  }
+  const proposals = await proposalService.getProposalsByProjectId(req.params.projectId);
 
-  if (project.student.toString() !== user.id) {
-    throw new ApiError(httpStatus.FORBIDDEN, 'Access denied');
-  }
-
-  res.send({ project, proposals: proposal });
+  res.send({ project: req.project, proposal: proposals });
 });
 
 module.exports = {

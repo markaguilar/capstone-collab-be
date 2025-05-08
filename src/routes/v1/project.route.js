@@ -3,6 +3,7 @@ const { projectController } = require('../../controllers');
 const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const { projectValidation } = require('../../validations');
+const verifyProjectOwnership = require('../../middlewares/verifyProjectOwnerShip');
 
 const router = express.Router();
 
@@ -11,6 +12,8 @@ router
   .post(auth('manageProjects'), validate(projectValidation.createProject), projectController.createProject)
   .get(auth('getProjects'), validate(projectValidation.getProjects), projectController.getProjects);
 
-router.route('/:projectId').get(auth('getProjects'), validate(projectValidation.getProject), projectController.getProject);
+router
+  .route('/:projectId')
+  .get(auth('getProjects'), validate(projectValidation.getProject), verifyProjectOwnership, projectController.getProject);
 
 module.exports = router;
