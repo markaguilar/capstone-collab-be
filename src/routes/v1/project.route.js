@@ -3,7 +3,7 @@ const { projectController } = require('../../controllers');
 const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const { projectValidation } = require('../../validations');
-const verifyProjectOwnership = require('../../middlewares/verifyProjectOwnerShip');
+const verifyProjectOwnership = require('../../middlewares/verifyProjectOwnership');
 
 const router = express.Router();
 
