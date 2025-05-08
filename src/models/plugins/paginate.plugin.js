@@ -73,7 +73,9 @@ const paginate = (schema) => {
     }
 
     // Apply .lean() to return plain JavaScript objects instead of Mongoose documents
-    docsPromise = docsPromise.lean();
+    if (options.lean !== false) {
+      docsPromise = docsPromise.lean();
+    }
     docsPromise = docsPromise.exec();
 
     return Promise.all([countPromise, docsPromise]).then((values) => {
