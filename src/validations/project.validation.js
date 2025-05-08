@@ -5,9 +5,9 @@ const createProject = {
   body: Joi.object().keys({
     title: Joi.string().required(),
     description: Joi.string().required(),
-    skillsRequired: Joi.array().required(),
+    skillsRequired: Joi.array().items(Joi.string()).required(),
     budget: Joi.number().integer(),
-    deadline: Joi.string().required(),
+    deadline: Joi.date().iso().required(),
     isFeatured: Joi.boolean(),
     status: Joi.string(),
   }),
