@@ -114,6 +114,9 @@ const generateVerifyEmailToken = async (user) => {
 };
 
 const generateAuthCookies = async (tokens, rememberMe = false) => {
+  const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'minutes');
+  const refreshTokenExpires = moment().add(config.jwt.refreshExpirationDays, 'days');
+
   return {
     accessToken: {
       name: 'accessToken',
@@ -122,7 +125,7 @@ const generateAuthCookies = async (tokens, rememberMe = false) => {
         httpOnly: config.env === 'production',
         secure: config.env === 'production',
         sameSite: 'Strict',
-        maxAge: 60 * 1000, // 1 minute
+        maxAge: accessTokenExpires.diff(moment(), 'milliseconds'),
       },
     },
     refreshToken: {
@@ -132,7 +135,7 @@ const generateAuthCookies = async (tokens, rememberMe = false) => {
         httpOnly: config.env === 'production',
         secure: config.env === 'production',
         sameSite: 'Strict',
-        maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 0,
+        maxAge: rememberMe ? refreshTokenExpires.diff(moment(), 'milliseconds') : 0,
       },
     },
   };

@@ -5,6 +5,11 @@ const { authService, userService, tokenService, emailService } = require('../ser
 const register = catchAsync(async (req, res) => {
   const user = await userService.createUser(req.body);
   const tokens = await tokenService.generateAuthTokens(user);
+  const cookies = await tokenService.generateAuthCookies(tokens);
+
+  res.cookie(cookies.accessToken.name, cookies.accessToken.value, cookies.accessToken.options);
+  res.cookie(cookies.refreshToken.name, cookies.refreshToken.value, cookies.refreshToken.options);
+
   res.status(httpStatus.CREATED).send({ user, tokens });
 });
 
