@@ -48,9 +48,35 @@ const getProjectOwnershipInfo = async (projectId) => {
   return Project.findById(projectId).select('student').lean();
 };
 
+/**
+ * Query for feature projects
+ * @param {Object} filter - Mongo filter
+ * @param {Object} options - Query options
+ * @param {string} [options.sortBy] - Sort option in the format: sortField:(desc|asc)
+ * @param {number} [options.limit] - Maximum number of results per page (default = 10)
+ * @param {number} [options.page] - Current page (default = 1)
+ * @param {number} [options.createdAt]
+ * @returns {Promise<void>}
+ */
+const getFeaturedProjects = async (filter = {}, options = {}) => {
+  const paginateOptions = {
+    ...options,
+    populate: {
+      path: 'student',
+      select: 'name username email',
+    },
+    sortBy: options.sortBy || 'createdAt:desc',
+    limit: parseInt(options.limit, 10) || 10,
+    page: parseInt(options.page, 10) || 1,
+  };
+
+  return Project.paginate({ isFeatured: true, ...filter }, paginateOptions);
+};
+
 module.exports = {
   createProject,
   queryProjects,
   getProjectById,
   getProjectOwnershipInfo,
+  getFeaturedProjects,
 };
