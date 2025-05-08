@@ -11,8 +11,7 @@ const createProposal = {
 
 const getProposals = {
   query: Joi.object().keys({
-    name: Joi.string(),
-    role: Joi.string(),
+    status: Joi.string(),
     sortBy: Joi.string(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),

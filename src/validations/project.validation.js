@@ -23,6 +23,16 @@ const getProjects = {
   }),
 };
 
+const getMyProjects = {
+  query: Joi.object().keys({
+    student: Joi.string().custom(objectId),
+    title: Joi.string(),
+    sortBy: Joi.string(),
+    limit: Joi.number().integer(),
+    page: Joi.number().integer(),
+  }),
+};
+
 const getProject = {
   params: Joi.object().keys({
     projectId: Joi.string().custom(objectId),
@@ -32,5 +42,6 @@ const getProject = {
 module.exports = {
   createProject,
   getProjects,
+  getMyProjects,
   getProject,
 };

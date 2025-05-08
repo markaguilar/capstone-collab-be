@@ -10,7 +10,11 @@ const router = express.Router();
 router
   .route('/')
   .post(auth('manageProjects'), validate(projectValidation.createProject), projectController.createProject)
-  .get(auth('getProjects'), validate(projectValidation.getProjects), projectController.getProjects);
+  .get(validate(projectValidation.getProjects), projectController.getProjects);
+
+router
+  .route('/my-projects')
+  .get(auth('getProjects'), validate(projectValidation.getMyProjects), projectController.getMyProjects);
 
 router
   .route('/:projectId')

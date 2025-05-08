@@ -10,7 +10,7 @@ const createProposal = catchAsync(async (req, res) => {
 });
 
 const getProposals = catchAsync(async (req, res) => {
-  const filter = pick(req.query, ['developer', 'project']);
+  const filter = { developer: req.user.id, ...pick(req.query, ['status']) };
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
 
   const result = await proposalService.queryProposals(filter, options);
