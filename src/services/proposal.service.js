@@ -21,10 +21,7 @@ const getProposalById = async (id) => {
 };
 
 const getProposalsByProjectId = async (projectId) => {
-  return Proposal
-    .find({ project: projectId })
-    .populate('developer')
-    .sort({ createdAt: -1 });
+  return Proposal.find({ project: projectId }).populate('developer').sort({ createdAt: -1 });
 };
 
 module.exports = {
