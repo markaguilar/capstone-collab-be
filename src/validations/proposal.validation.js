@@ -20,7 +20,7 @@ const getProposals = {
 };
 const getProposal = {
   params: Joi.object().keys({
-    proposalId: Joi.string().custom(objectId),
+    id: Joi.string().custom(objectId),
   }),
 };
 
