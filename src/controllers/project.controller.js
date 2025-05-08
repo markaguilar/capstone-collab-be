@@ -27,7 +27,7 @@ const getProject = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Project not found');
   }
 
-  res.send(project, proposal);
+  res.send({ project, proposals: proposal });
 });
 
 module.exports = {
