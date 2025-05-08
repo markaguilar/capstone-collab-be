@@ -12,12 +12,21 @@ const createProject = catchAsync(async (req, res) => {
 });
 
 const getProjects = catchAsync(async (req, res) => {
+  const filter = pick(req.query, ['title']);
+  const options = pick(req.query, ['sortBy', 'limit', 'page', '-createdAt']);
+
+  const projects = await projectService.getFeaturedProjects(filter, options);
+
+  res.send(projects);
+});
+
+const getMyProjects = catchAsync(async (req, res) => {
   const filter = { student: req.user.id, ...pick(req.query, ['title']) };
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
 
-  const result = await projectService.queryProjects(filter, options);
+  const projects = await projectService.queryProjects(filter, options);
 
-  res.send(result);
+  res.send(projects);
 });
 
 const getProject = catchAsync(async (req, res) => {
@@ -25,14 +34,15 @@ const getProject = catchAsync(async (req, res) => {
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
-
+  const project = await projectService.getProjectById(req.project._id);
   const proposals = await proposalService.getProposalsByProjectId(req.params.projectId);
 
-  res.send({ project: req.project, proposal: proposals });
+  res.send({ project, proposal: proposals });
 });
 
 module.exports = {
   createProject,
   getProjects,
+  getMyProjects,
   getProject,
 };

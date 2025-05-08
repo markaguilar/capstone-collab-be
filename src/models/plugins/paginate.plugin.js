@@ -39,7 +39,7 @@ const paginate = (schema) => {
     const countPromise = this.countDocuments(filter).exec();
     let docsPromise = this.find(filter).sort(sort).skip(skip).limit(limit);
 
-    if (options.populate) {
+    /*    if (options.populate) {
       options.populate.split(',').forEach((populateOption) => {
         docsPromise = docsPromise.populate(
           populateOption
@@ -48,8 +48,34 @@ const paginate = (schema) => {
             .reduce((a, b) => ({ path: b, populate: a }))
         );
       });
+    } */
+
+    if (options.populate) {
+      if (typeof options.populate === 'string') {
+        // Support comma-separated string paths
+        options.populate.split(',').forEach((populateOption) => {
+          docsPromise = docsPromise.populate(
+            populateOption
+              .split('.')
+              .reverse()
+              .reduce((a, b) => ({ path: b, populate: a }))
+          );
+        });
+      } else if (Array.isArray(options.populate)) {
+        // Support array of populate config objects
+        options.populate.forEach((pop) => {
+          docsPromise = docsPromise.populate(pop);
+        });
+      } else if (typeof options.populate === 'object') {
+        // Support single populate object
+        docsPromise = docsPromise.populate(options.populate);
+      }
     }
 
+    // Apply .lean() to return plain JavaScript objects instead of Mongoose documents
+    if (options.lean !== false) {
+      docsPromise = docsPromise.lean();
+    }
     docsPromise = docsPromise.exec();
 
     return Promise.all([countPromise, docsPromise]).then((values) => {
