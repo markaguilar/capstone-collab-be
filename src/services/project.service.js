@@ -39,8 +39,18 @@ const getProjectById = async (id) => {
   return Project.findById(id);
 };
 
+/**
+ * Get a project by id
+ * @param {ObjectId} projectId
+ * @returns {Promise<Project>}
+ */
+const getProjectOwnershipInfo = async (projectId) => {
+  return Project.findById(projectId).select('student').lean();
+};
+
 module.exports = {
   createProject,
   queryProjects,
   getProjectById,
+  getProjectOwnershipInfo,
 };

@@ -21,14 +21,14 @@ const verifyProjectOwnership = catchAsync(async (req, res, next) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Project ID is required');
   }
 
-  const project = await projectService.getProjectById(req.params.projectId);
+  const project = await projectService.getProjectOwnershipInfo(req.params.projectId);
   if (!project) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Project not found');
   }
 
   if (project.student.toString() !== req.user.id) {
     // Convert ObjectId to string for comparison with user ID
-    throw new ApiError(httpStatus.FORBIDDEN, 'Access denied');
+    throw new ApiError(httpStatus.FORBIDDEN, 'Access denied: User does not own this project');
   }
 
   req.project = project;
