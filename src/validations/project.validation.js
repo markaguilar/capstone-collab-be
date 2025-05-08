@@ -15,8 +15,8 @@ const createProject = {
 
 const getProjects = {
   query: Joi.object().keys({
-    name: Joi.string(),
-    role: Joi.string(),
+    student: Joi.string().custom(objectId),
+    title: Joi.string(),
     sortBy: Joi.string(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
