@@ -11,6 +11,11 @@ router
   .post(auth('manageUsers'), validate(userValidation.createUser), userController.createUser)
   .get(auth('getUsers'), validate(userValidation.getUsers), userController.getUsers);
 
+router.route('/me').patch(auth('editMe'), validate(userValidation.updateMe), userController.updateMe);
+
+router.route('/:userId').get(validate(userValidation.getUser), userController.getPublicUser);
+
+// admin
 router
   .route('/:userId')
   .get(auth('getUsers'), validate(userValidation.getUser), userController.getUser)

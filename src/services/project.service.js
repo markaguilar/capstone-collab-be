@@ -59,7 +59,7 @@ const getProjectOwnershipInfo = async (projectId) => {
  */
 const getFeaturedProjects = async (
   filter = {},
-  { sortBy = 'createdAt:desc', limit = 10, page = 1, ...restOptions } = {}
+  { sortBy = 'createdAt:desc', limit = 10, page = 1, lean, ...restOptions } = {}
 ) => {
   const paginateOptions = {
     ...restOptions,
@@ -70,6 +70,7 @@ const getFeaturedProjects = async (
     sortBy,
     limit: parseInt(limit, 10),
     page: parseInt(page, 10),
+    lean,
   };
 
   return Project.paginate({ isFeatured: true, ...filter }, paginateOptions);
