@@ -27,6 +27,21 @@ const getUser = {
   }),
 };
 
+const updateMe = {
+  body: Joi.object()
+    .keys({
+      email: Joi.string().email(),
+      // TODO: Enable password updates after implementing proper password change flow with current password verification
+      // password: Joi.string().custom(password),
+      name: Joi.string(),
+      username: Joi.string()
+        .required()
+        .pattern(/^[a-zA-Z0-9_-]{3,16}$/)
+        .message('Username must be 3-16 characters and can only contain letters, numbers, underscores and hyphens'),
+    })
+    .min(1),
+};
+
 const updateUser = {
   params: Joi.object().keys({
     userId: Joi.required().custom(objectId),
@@ -50,6 +65,7 @@ module.exports = {
   createUser,
   getUsers,
   getUser,
+  updateMe,
   updateUser,
   deleteUser,
 };
