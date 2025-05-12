@@ -52,7 +52,11 @@ const updateMe = catchAsync(async (req, res) => {
 
 const updateUser = catchAsync(async (req, res) => {
   const user = await userService.updateUserById(req.params.userId, req.body);
-  res.send(user);
+  res.send({
+    name: user.name,
+    username: user.username,
+    email: user.email,
+  });
 });
 
 const deleteUser = catchAsync(async (req, res) => {

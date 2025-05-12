@@ -13,9 +13,9 @@ router
 
 router.route('/me').patch(auth('editMe'), validate(userValidation.updateMe), userController.updateMe);
 
-router.route('/:userId').get(validate(userValidation.getUser), userController.getPublicUser);
+router.route('/public/:userId').get(validate(userValidation.getUser), userController.getPublicUser);
 
-// admin
+// Admin-only routes - requires specific permissions
 router
   .route('/:userId')
   .get(auth('getUsers'), validate(userValidation.getUser), userController.getUser)
