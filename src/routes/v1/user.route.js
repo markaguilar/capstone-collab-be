@@ -1,6 +1,11 @@
 const express = require('express');
+
+// middlewares
 const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
+const validateByRole = require('../../middlewares/validateByRole');
+
+// validation
 const userValidation = require('../../validations/user.validation');
 const userController = require('../../controllers/user.controller');
 
@@ -11,7 +16,7 @@ router
   .post(auth('manageUsers'), validate(userValidation.createUser), userController.createUser)
   .get(auth('getUsers'), validate(userValidation.getUsers), userController.getUsers);
 
-router.route('/me').patch(auth('editMe'), validate(userValidation.updateMe), userController.updateMe);
+router.route('/me').patch(auth('editMe'), validateByRole, userController.updateMe);
 
 router.route('/public/:userId').get(validate(userValidation.getUser), userController.getPublicUser);
 

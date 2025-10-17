@@ -15,6 +15,12 @@ const userSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    bio: {
+      type: String,
+    },
+    profilePicture: {
+      type: String,
+    },
     email: {
       type: String,
       required: true,

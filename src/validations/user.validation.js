@@ -38,6 +38,8 @@ const updateMe = {
         .required()
         .pattern(/^[a-zA-Z0-9_-]{3,16}$/)
         .message('Username must be 3-16 characters and can only contain letters, numbers, underscores and hyphens'),
+      profilePicture: Joi.string().uri(),
+      bio: Joi.string(),
     })
     .min(1),
 };
