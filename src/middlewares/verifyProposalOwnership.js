@@ -1,4 +1,5 @@
 const httpStatus = require('http-status');
+const { isValidObjectId } = require('mongoose');
 const { proposalService, projectService } = require('../services');
 const catchAsync = require('../utils/catchAsync');
 const ApiError = require('../utils/ApiError');
@@ -22,8 +23,8 @@ const verifyProposalOwnership = catchAsync(async (req, res, next) => {
   const userRole = req.user.role;
 
   // Validate proposalId exists
-  if (!proposalId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Proposal ID is required');
+  if (!proposalId || !isValidObjectId(proposalId)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid proposal ID');
   }
 
   // Get proposal
@@ -35,9 +36,11 @@ const verifyProposalOwnership = catchAsync(async (req, res, next) => {
 
   // Student: Verify they own the PROJECT to accept/reject proposals
   if (userRole === 'student') {
-    const project = await projectService.getProjectOwnershipInfo(proposal.project._id);
-
-    if (project.student.toString() !== userId) {
+    const ownerId =
+      proposal.project.student && proposal.project.student._id
+        ? proposal.project.student._id.toString()
+        : proposal.project.student.toString();
+    if (ownerId !== userId) {
       throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to modify this proposal');
     }
   }

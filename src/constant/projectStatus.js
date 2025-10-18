@@ -20,6 +20,9 @@ const STATUS_TRANSITIONS = {
   [PROJECT_STATUS.CANCELLED]: [],
 };
 
+Object.freeze(PROJECT_STATUS);
+Object.freeze(STATUS_TRANSITIONS);
+
 module.exports = {
   PROJECT_STATUS,
   STATUS_TRANSITIONS,

@@ -28,8 +28,8 @@ router.get(
 router.get(
   '/project/:projectId',
   auth('getProjects'),
-  verifyProjectOwnership,
   validate(proposalValidation.getProposals),
+  verifyProjectOwnership,
   proposalController.getProjectProposals
 );
 
@@ -40,7 +40,8 @@ router.get('/:proposalId', auth('getProposals'), validate(proposalValidation.get
 router.patch(
   '/:proposalId/accept',
   auth('manageProjects'),
-  verifyProjectOwnerForProposal, // ✅ SECURITY FIX
+  validate(proposalValidation.getProposal), // validate params first
+  verifyProjectOwnerForProposal,
   validate(proposalValidation.updateProposal),
   proposalController.acceptProposal
 );
@@ -49,7 +50,8 @@ router.patch(
 router.patch(
   '/:proposalId/reject',
   auth('manageProjects'),
-  verifyProjectOwnerForProposal, // ✅ SECURITY FIX
+  validate(proposalValidation.getProposal),
+  verifyProjectOwnerForProposal,
   validate(proposalValidation.updateProposal),
   proposalController.rejectProposal
 );
@@ -58,7 +60,8 @@ router.patch(
 router.patch(
   '/:proposalId/withdraw',
   auth('manageProposals'),
-  verifyProposalAuthor, // ✅ SECURITY FIX
+  validate(proposalValidation.getProposal),
+  verifyProposalAuthor,
   validate(proposalValidation.withdrawProposal),
   proposalController.withdrawProposal
 );

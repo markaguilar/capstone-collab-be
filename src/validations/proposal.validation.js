@@ -3,11 +3,10 @@ const { objectId } = require('./custom.validation');
 
 const createProposal = {
   params: Joi.object().keys({
-    projectId: objectId.required(),
+    projectId: Joi.string().custom(objectId).required(),
   }),
   body: Joi.object()
     .keys({
-      projectId: Joi.string().custom(objectId).required(),
       coverLetter: Joi.string().required().min(20).max(2000).trim(),
       proposedBudget: Joi.number().required().min(0),
       proposedDeadline: Joi.date().required().greater('now').messages({

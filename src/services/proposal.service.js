@@ -2,6 +2,8 @@ const httpStatus = require('http-status');
 const mongoose = require('mongoose');
 const { Proposal, Project } = require('../models');
 const ApiError = require('../utils/ApiError');
+const { PROJECT_STATUS } = require('../constant/projectStatus');
+const parseSort = require('../utils/ParseSort');
 
 /**
  * Create a proposal
@@ -17,7 +19,11 @@ const createProposal = async (developerId, projectId, proposalBody) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Project not found');
   }
 
-  // Prevent student from applying to an own project
+  if (project.status !== PROJECT_STATUS.OPEN) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Project is not open for proposals');
+  }
+
+  // Prevent a student from applying to an own project
   if (project.student.toString() === developerId) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'You cannot apply to your own project');
   }
@@ -41,7 +47,9 @@ const createProposal = async (developerId, projectId, proposalBody) => {
   // Increment project proposal count
   await Project.findByIdAndUpdate(projectId, { $inc: { proposalCount: 1 } });
 
-  return proposal.populate('developer', 'id name profilePicture portfolio skills');
+  await proposal.populate('developer', 'id name profilePicture portfolio skills');
+
+  return proposal;
 };
 
 /**
@@ -52,13 +60,13 @@ const createProposal = async (developerId, projectId, proposalBody) => {
  * @returns {Promise<Array>}
  */
 const getProposalsByProjectId = async (projectId, filter = {}, options = {}) => {
-  const { sortBy = 'createdAt:desc', limit = 10, page = 1 } = options;
+  const { sortBy = '-createdAt', limit = 10, page = 1 } = options;
 
   const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
   const proposals = await Proposal.find({ project: projectId, ...filter })
     .populate('developer', 'id name profilePicture portfolio skills hourlyRate')
-    .sort(sortBy)
+    .sort(parseSort(sortBy))
     .limit(parseInt(limit, 10))
     .skip(skip)
     .lean();
@@ -149,7 +157,7 @@ const acceptProposal = async (proposalId, studentId) => {
     const updatedProject = await Project.findOneAndUpdate(
       {
         _id: proposal.project,
-        assignedDeveloper: { $exists: false }, // Only assign if no developer yet
+        $or: [{ assignedDeveloper: null }, { assignedDeveloper: { $exists: false } }],
       },
       {
         $set: {
@@ -189,7 +197,7 @@ const acceptProposal = async (proposalId, studentId) => {
     // Step 6: Commit transaction
     await session.commitTransaction();
 
-    // Fetch and return updated proposal
+    // Fetch and return an updated proposal
     return updatedProposal.populate('developer', 'id name email profilePicture').execPopulate();
   } catch (error) {
     await session.abortTransaction();
@@ -209,7 +217,7 @@ const acceptProposal = async (proposalId, studentId) => {
 const rejectProposal = async (proposalId, studentId, rejectionReason) => {
   const proposal = await getProposalById(proposalId);
 
-  // Verify student owns the project
+  // Verify the student owns the project
   if (proposal.project.student.toString() !== studentId) {
     throw new ApiError(httpStatus.FORBIDDEN, 'You do not own this project');
   }
@@ -265,7 +273,7 @@ const getDeveloperProposals = async (developerId, filter = {}, options = {}) => 
 
   const proposals = await Proposal.find({ developer: developerId, ...filter })
     .populate('project', 'id title budget deadline status')
-    .sort(sortBy)
+    .sort(parseSort(sortBy))
     .limit(parseInt(limit, 10))
     .skip(skip)
     .lean();

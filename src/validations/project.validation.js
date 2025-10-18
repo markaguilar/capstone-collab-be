@@ -18,12 +18,14 @@ const createProject = {
       isPublic: Joi.boolean().default(true),
       maxDevelopers: Joi.number().integer().min(1).default(1),
       tags: Joi.array().items(Joi.string().max(30).trim()),
-      attachments: Joi.array().items(
-        Joi.object().keys({
-          fileName: Joi.string().required(),
-          fileUrl: Joi.string().uri().required(),
-        })
-      ),
+      attachments: Joi.array()
+        .max(10)
+        .items(
+          Joi.object().keys({
+            fileName: Joi.string().required(),
+            fileUrl: Joi.string().uri().required(),
+          })
+        ),
     })
     .required(),
 };
@@ -45,12 +47,14 @@ const updateProject = {
       isPublic: Joi.boolean(),
       maxDevelopers: Joi.number().integer().min(1),
       tags: Joi.array().items(Joi.string().max(30).trim()),
-      attachments: Joi.array().items(
-        Joi.object().keys({
-          fileName: Joi.string().required(),
-          fileUrl: Joi.string().uri().required(),
-        })
-      ),
+      attachments: Joi.array()
+        .max(10)
+        .items(
+          Joi.object().keys({
+            fileName: Joi.string().required(),
+            fileUrl: Joi.string().uri().required(),
+          })
+        ),
     })
     .min(1), // At least one field must be provided
 };

@@ -1,7 +1,7 @@
 // models/project.model.js
 const mongoose = require('mongoose');
 const { toJSON, paginate } = require('./plugins');
-const { PROJECT_STATUS } = require('../constant/projectStatus');
+const { PROJECT_STATUS, STATUS_TRANSITIONS } = require('../constant/projectStatus');
 
 const projectSchema = mongoose.Schema(
   {
@@ -17,14 +17,14 @@ const projectSchema = mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      minLength: 5,
+      minlength: 5,
       maxlength: 200,
     },
     description: {
       type: String,
       required: true,
       trim: true,
-      minLength: 20,
+      minlength: 20,
       maxlength: 5000,
     },
 
@@ -136,12 +136,27 @@ const projectSchema = mongoose.Schema(
   }
 );
 
+projectSchema.path('status').validate(function (nextStatus) {
+  if (!this.isNew && this.isModified('status')) {
+    const prev = this.get('status');
+    return (STATUS_TRANSITIONS[prev] || []).includes(nextStatus);
+  }
+  return true;
+}, 'Illegal status transition');
+
 // Indexes for better query performance
 projectSchema.index({ student: 1, status: 1 });
 projectSchema.index({ status: 1, isFeatured: 1 });
 projectSchema.index({ createdAt: -1 });
 projectSchema.index({ skillsRequired: 1 });
 projectSchema.index({ category: 1 });
+projectSchema.index({
+  title: 'text',
+  description: 'text',
+  skillsRequired: 'text',
+  category: 'text',
+  tags: 'text',
+});
 
 // Plugins
 projectSchema.plugin(toJSON);
@@ -161,7 +176,7 @@ projectSchema.plugin(paginate);
  * @property {string} status - Project status (open, in_progress, completed, cancelled)
  * @property {ObjectId} assignedDeveloper - Developer assigned to project
  * @property {boolean} isFeatured - Whether project is featured
- * @property {boolean} isPublic - Whether project is visible to all
+ * @property {boolean} isPublic - Whether a project is visible to all
  * @property {number} maxDevelopers - Maximum developers allowed
  * @property {number} viewCount - Number of times viewed
  * @property {number} proposalCount - Number of proposals received

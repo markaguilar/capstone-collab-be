@@ -32,7 +32,7 @@ const proposalSchema = mongoose.Schema(
       required: true,
       validate: {
         validator(v) {
-          return v > new Date();
+          return v instanceof Date && v.getTime() > Date.now();
         },
         message: 'Proposed deadline must be in the future',
       },

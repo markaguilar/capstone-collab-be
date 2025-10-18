@@ -121,6 +121,8 @@ const updateProjectById = async (projectId, updateBody) => {
     // eslint-disable-next-line no-param-reassign
     delete updateBody[field];
   });
+  // eslint-disable-next-line no-param-reassign
+  delete updateBody._id;
 
   Object.assign(project, updateBody);
   await project.save();
@@ -178,7 +180,6 @@ const assignDeveloper = async (projectId, developerId) => {
   const project = await Project.findByIdAndUpdate(
     {
       _id: projectId,
-      assignedDeveloper: developerId,
       status: PROJECT_STATUS.OPEN,
       $or: [{ assignedDeveloper: null }, { assignedDeveloper: { $exists: false } }],
     },
@@ -196,7 +197,7 @@ const assignDeveloper = async (projectId, developerId) => {
 /**
  * Update project status
  * @param {ObjectId} projectId
- * @param newStatus
+ *  @param {string} newStatus
  * @returns {Promise<Project>}
  */
 const updateProjectStatus = async (projectId, newStatus) => {
