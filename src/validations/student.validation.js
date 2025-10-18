@@ -4,7 +4,6 @@ const updateStudent = {
   body: Joi.object()
     .keys({
       // Common fields (optional, for flexibility)
-      email: Joi.string().email(),
       name: Joi.string().min(2).max(50),
       username: Joi.string()
         .pattern(/^[a-zA-Z0-9_-]{3,16}$/)

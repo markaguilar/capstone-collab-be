@@ -7,30 +7,38 @@ const ApiError = require('../utils/ApiError');
  * Middleware to verify that the authenticated user owns the project
  * specified by the projectId parameter in the request.
  *
- * @param {Object} req - Express request object
+ * Prerequisites:
+ * - User must be authenticated (via auth middleware)
+ * - projectId must be present in req.params
+ *
+ * @param {Object} req - Express request object with authenticated user
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
- * @throws {ApiError} - 404 if project not found, 403 if user doesn't own the project
+ * @throws {ApiError} - 404 if a project not found, 403 if user doesn't own the project
  */
 const verifyProjectOwnership = catchAsync(async (req, res, next) => {
-  if (!req.user || !req.user.id) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'User not authenticated');
-  }
+  const { projectId } = req.params;
+  const userId = req.user.id;
 
-  if (!req.params.projectId) {
+  // Validate projectId exists
+  if (!projectId) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Project ID is required');
   }
 
-  const project = await projectService.getProjectOwnershipInfo(req.params.projectId);
+  // Get a project with only necessary fields for ownership check
+  const project = await projectService.getProjectOwnershipInfo(projectId);
+
   if (!project) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Project not found');
   }
 
-  if (project.student.toString() !== req.user.id) {
-    // Convert ObjectId to string for comparison with user ID
-    throw new ApiError(httpStatus.FORBIDDEN, 'Access denied: User does not own this project');
+  // Compare ObjectIds - convert both to strings for safe comparison
+  const projectOwnerId = project.student.toString();
+  if (projectOwnerId !== userId) {
+    throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to access this project');
   }
 
+  // Attach a project to request for use in a controller
   req.project = project;
   next();
 });

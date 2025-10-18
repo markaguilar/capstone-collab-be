@@ -61,22 +61,16 @@ const updateMe = catchAsync(async (req, res) => {
   const user = await userService.getUserById(req.user.id);
 
   // Separate common fields from role-specific fields
-  const commonFields = ['name', 'email', 'username', 'profilePicture', 'bio'];
+  const commonFields = ['name', 'username', 'profilePicture', 'bio'];
   const commonUpdates = pick(req.body, commonFields);
   const roleUpdates = Object.keys(req.body).reduce((acc, key) => {
-    if (!commonFields.includes(key)) acc[key] = req.body[key];
+    if (!commonFields.includes(key)) {
+      acc[key] = req.body[key];
+    }
     return acc;
   }, {});
 
-  Object.keys(req.body).forEach((key) => {
-    if (commonFields.includes(key)) {
-      commonUpdates[key] = req.body[key];
-    } else {
-      roleUpdates[key] = req.body[key];
-    }
-  });
-
-  // Update user model with common fields
+  // Update the user model with common fields
   let updatedUser = user;
   if (Object.keys(commonUpdates).length > 0) {
     updatedUser = await userService.updateUserById(req.user.id, commonUpdates);
@@ -85,15 +79,17 @@ const updateMe = catchAsync(async (req, res) => {
   // Update role-specific model
   let roleData = null;
   if (user.role === 'student') {
-    roleData =
-      Object.keys(roleUpdates).length > 0
-        ? await studentService.updateStudentProfile(req.user.id, roleUpdates)
-        : await studentService.getStudentByUserId(req.user.id);
+    if (Object.keys(roleUpdates).length > 0) {
+      roleData = await studentService.updateStudentProfile(req.user.id, roleUpdates);
+    } else {
+      roleData = await studentService.getStudentByUserId(req.user.id);
+    }
   } else if (user.role === 'developer') {
-    roleData =
-      Object.keys(roleUpdates).length > 0
-        ? await developerService.updateDeveloperProfile(req.user.id, roleUpdates)
-        : await developerService.getDeveloperByUserId(req.user.id);
+    if (Object.keys(roleUpdates).length > 0) {
+      roleData = await developerService.updateDeveloperProfile(req.user.id, roleUpdates);
+    } else {
+      roleData = await developerService.getDeveloperByUserId(req.user.id);
+    }
   }
 
   res.send({
