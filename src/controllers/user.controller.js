@@ -2,7 +2,8 @@ const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
-const { userService } = require('../services');
+
+const { userService, studentService, developerService } = require('../services');
 
 const createUser = catchAsync(async (req, res) => {
   const user = await userService.createUser(req.body);
@@ -32,7 +33,9 @@ const getPublicUser = catchAsync(async (req, res) => {
   res.send({
     name: user.name,
     username: user.username,
-    email: user.email,
+    profilePicture: user.profilePicture,
+    bio: user.bio,
+    role: user.role,
   });
 });
 
@@ -42,12 +45,61 @@ const getMe = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  res.send(user);
+  let roleData = null;
+
+  if (user.role === 'student') {
+    roleData = await studentService.getStudentByUserId(user.id);
+  } else if (user.role === 'developer') {
+    roleData = await developerService.getDeveloperByUserId(user.id);
+  }
+
+  res.send({ user, roleData });
 });
 
 const updateMe = catchAsync(async (req, res) => {
-  const user = await userService.updateUserById(req.user.id, req.body);
-  res.send(user);
+  // Get user to determine role
+  const user = await userService.getUserById(req.user.id);
+
+  // Separate common fields from role-specific fields
+  const commonFields = ['name', 'email', 'username', 'profilePicture', 'bio'];
+  const commonUpdates = pick(req.body, commonFields);
+  const roleUpdates = Object.keys(req.body).reduce((acc, key) => {
+    if (!commonFields.includes(key)) acc[key] = req.body[key];
+    return acc;
+  }, {});
+
+  Object.keys(req.body).forEach((key) => {
+    if (commonFields.includes(key)) {
+      commonUpdates[key] = req.body[key];
+    } else {
+      roleUpdates[key] = req.body[key];
+    }
+  });
+
+  // Update user model with common fields
+  let updatedUser = user;
+  if (Object.keys(commonUpdates).length > 0) {
+    updatedUser = await userService.updateUserById(req.user.id, commonUpdates);
+  }
+
+  // Update role-specific model
+  let roleData = null;
+  if (user.role === 'student') {
+    roleData =
+      Object.keys(roleUpdates).length > 0
+        ? await studentService.updateStudentProfile(req.user.id, roleUpdates)
+        : await studentService.getStudentByUserId(req.user.id);
+  } else if (user.role === 'developer') {
+    roleData =
+      Object.keys(roleUpdates).length > 0
+        ? await developerService.updateDeveloperProfile(req.user.id, roleUpdates)
+        : await developerService.getDeveloperByUserId(req.user.id);
+  }
+
+  res.send({
+    user: updatedUser,
+    roleData,
+  });
 });
 
 const updateUser = catchAsync(async (req, res) => {
