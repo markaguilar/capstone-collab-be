@@ -1,6 +1,5 @@
 const Joi = require('joi');
-
-const objectId = Joi.string().hex().length(24);
+const { objectId } = require('./custom.validation');
 
 const createProject = {
   body: Joi.object()
@@ -62,7 +61,12 @@ const getProjects = {
     category: Joi.string().valid('web', 'mobile', 'desktop', 'ai', 'data', 'other'),
     status: Joi.string().valid('open', 'in_progress', 'completed', 'cancelled'),
     minBudget: Joi.number().min(0),
-    maxBudget: Joi.number().min(0),
+    maxBudget: Joi.number()
+      .min(0)
+      .when('minBudget', {
+        is: Joi.number().min(0),
+        then: Joi.number().min(Joi.ref('minBudget')),
+      }),
     skillsRequired: Joi.array().items(Joi.string()),
     sortBy: Joi.string(),
     limit: Joi.number().integer().min(1).max(100),
@@ -81,13 +85,13 @@ const getMyProjects = {
 
 const getProject = {
   params: Joi.object().keys({
-    projectId: objectId.required(),
+    projectId: Joi.string().custom(objectId).required(),
   }),
 };
 
 const deleteProject = {
   params: Joi.object().keys({
-    projectId: objectId.required(),
+    projectId: Joi.string().custom(objectId).required(),
   }),
 };
 

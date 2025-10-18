@@ -4,13 +4,21 @@ const { Developer } = require('../models');
 const ApiError = require('../utils/ApiError');
 
 const getDeveloperByUserId = async (userId) => {
-  return Developer.findById(userId);
+  // return Developer.findById(userId);
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid userId');
+  }
+  return Developer.findOne({ userId: new mongoose.Types.ObjectId(userId) });
 };
 
 const updateDeveloperProfile = async (userId, updateBody) => {
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid userId');
   }
+
+  // Drop immutable/ownership fields
+  // eslint-disable-next-line no-param-reassign
+  ['_id', 'userId', 'createdAt', 'updatedAt'].forEach((k) => delete updateBody[k]);
 
   const developer = await Developer.findOneAndUpdate(
     { userId: new mongoose.Types.ObjectId(userId) },

@@ -24,6 +24,7 @@ const getProposal = catchAsync(async (req, res) => {
 });
 
 const acceptProposal = catchAsync(async (req, res) => {
+  // Ownership already verified by verifyProjectOwnerForProposal middleware
   const proposal = await proposalService.acceptProposal(req.params.proposalId, req.user.id);
 
   res.send({
@@ -33,6 +34,7 @@ const acceptProposal = catchAsync(async (req, res) => {
 });
 
 const rejectProposal = catchAsync(async (req, res) => {
+  // Ownership already verified by verifyProjectOwnerForProposal middleware
   const proposal = await proposalService.rejectProposal(req.params.proposalId, req.user.id, req.body.rejectionReason);
 
   res.send({
@@ -42,6 +44,7 @@ const rejectProposal = catchAsync(async (req, res) => {
 });
 
 const withdrawProposal = catchAsync(async (req, res) => {
+  // Ownership already verified by verifyProposalAuthor middleware
   const proposal = await proposalService.withdrawProposal(req.params.proposalId, req.user.id);
 
   res.send({

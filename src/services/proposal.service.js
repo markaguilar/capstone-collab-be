@@ -1,7 +1,15 @@
 const httpStatus = require('http-status');
+const mongoose = require('mongoose');
 const { Proposal, Project } = require('../models');
 const ApiError = require('../utils/ApiError');
 
+/**
+ * Create a proposal
+ * @param {ObjectId} developerId
+ * @param {ObjectId} projectId
+ * @param {Object} proposalBody
+ * @returns {Promise<Proposal>}
+ */
 const createProposal = async (developerId, projectId, proposalBody) => {
   // Check if a project exists
   const project = await Project.findById(projectId);
@@ -9,7 +17,7 @@ const createProposal = async (developerId, projectId, proposalBody) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Project not found');
   }
 
-  // Prevent a student from applying to an own project
+  // Prevent student from applying to an own project
   if (project.student.toString() === developerId) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'You cannot apply to your own project');
   }
@@ -33,23 +41,40 @@ const createProposal = async (developerId, projectId, proposalBody) => {
   // Increment project proposal count
   await Project.findByIdAndUpdate(projectId, { $inc: { proposalCount: 1 } });
 
-  return proposal.populate('developer', 'name profilePicture portfolio skills');
+  return proposal.populate('developer', 'id name profilePicture portfolio skills');
 };
 
+/**
+ * Get proposals for a project with pagination
+ * @param {ObjectId} projectId
+ * @param {Object} filter
+ * @param {Object} options
+ * @returns {Promise<Array>}
+ */
 const getProposalsByProjectId = async (projectId, filter = {}, options = {}) => {
+  const { sortBy = 'createdAt:desc', limit = 10, page = 1 } = options;
+
+  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
   const proposals = await Proposal.find({ project: projectId, ...filter })
-    .populate('developer', 'name profilePicture portfolio skills hourlyRate')
-    .sort(options.sortBy || { createdAt: -1 })
-    .limit(options.limit || 10)
-    .skip((options.page - 1) * (options.limit || 10) || 0);
+    .populate('developer', 'id name profilePicture portfolio skills hourlyRate')
+    .sort(sortBy)
+    .limit(parseInt(limit, 10))
+    .skip(skip)
+    .lean();
 
   return proposals;
 };
 
+/**
+ * Get proposal by id
+ * @param {ObjectId} proposalId
+ * @returns {Promise<Proposal>}
+ */
 const getProposalById = async (proposalId) => {
   const proposal = await Proposal.findById(proposalId)
-    .populate('developer', 'name profilePicture portfolio skills experience bio')
-    .populate('project', 'title description budget deadline');
+    .populate('developer', 'id name email profilePicture skills experience bio')
+    .populate('project', 'id title description budget deadline status student');
 
   if (!proposal) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Proposal not found');
@@ -58,45 +83,133 @@ const getProposalById = async (proposalId) => {
   return proposal;
 };
 
+/**
+ * Accept a proposal with atomic transaction
+ * Prevents race conditions where multiple accepts can succeed simultaneously
+ *
+ * Atomic operations:
+ * 1. Update proposal status to 'accepted' (only if currently 'pending')
+ * 2. Assign a developer to a project (only if not already assigned)
+ * 3. Reject all other pending proposals for this project
+ *
+ * @param {ObjectId} proposalId
+ * @param {ObjectId} studentId
+ * @returns {Promise<Proposal>}
+ */
 const acceptProposal = async (proposalId, studentId) => {
-  const proposal = await getProposalById(proposalId);
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  // Verify student owns the project
-  if (proposal.project.student.toString() !== studentId) {
-    throw new ApiError(httpStatus.FORBIDDEN, 'You do not own this project');
+  try {
+    // Step 1: Fetch proposal within transaction
+    const proposal = await Proposal.findById(proposalId).session(session);
+
+    if (!proposal) {
+      await session.abortTransaction();
+      throw new ApiError(httpStatus.NOT_FOUND, 'Proposal not found');
+    }
+
+    // Step 2: A verified student owns the project
+    const project = await Project.findById(proposal.project).session(session);
+
+    if (!project) {
+      await session.abortTransaction();
+      throw new ApiError(httpStatus.NOT_FOUND, 'Project not found');
+    }
+
+    if (project.student.toString() !== studentId) {
+      await session.abortTransaction();
+      throw new ApiError(httpStatus.FORBIDDEN, 'You do not own this project');
+    }
+
+    // Step 3: Atomically update proposal status (only if pending)
+    // This prevents multiple accepts succeeding in parallel
+    const updatedProposal = await Proposal.findOneAndUpdate(
+      {
+        _id: proposalId,
+        status: 'pending', // Only accept if still pending
+      },
+      {
+        $set: { status: 'accepted' },
+      },
+      {
+        new: true,
+        runValidators: true,
+        session,
+      }
+    );
+
+    if (!updatedProposal) {
+      await session.abortTransaction();
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Proposal is not in pending status or has already been processed');
+    }
+
+    // Step 4: Atomically assign developer to project (only if not already assigned)
+    // Prevents multiple proposals from assigning different developers
+    const updatedProject = await Project.findOneAndUpdate(
+      {
+        _id: proposal.project,
+        assignedDeveloper: { $exists: false }, // Only assign if no developer yet
+      },
+      {
+        $set: {
+          assignedDeveloper: proposal.developer,
+          status: 'in_progress',
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+        session,
+      }
+    );
+
+    if (!updatedProject) {
+      await session.abortTransaction();
+      throw new ApiError(httpStatus.CONFLICT, 'Project has already been assigned to another developer');
+    }
+
+    // Step 5: Reject all other pending proposals for this project
+    const rejectionReason = 'Project was assigned to another developer';
+    await Proposal.updateMany(
+      {
+        project: proposal.project,
+        _id: { $ne: proposalId },
+        status: 'pending',
+      },
+      {
+        $set: {
+          status: 'rejected',
+          rejectionReason,
+        },
+      },
+      { session }
+    );
+
+    // Step 6: Commit transaction
+    await session.commitTransaction();
+
+    // Fetch and return updated proposal
+    return updatedProposal.populate('developer', 'id name email profilePicture').execPopulate();
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
   }
-
-  if (proposal.status !== 'pending') {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Proposal is not pending');
-  }
-
-  // Update proposal status
-  proposal.status = 'accepted';
-  await proposal.save();
-
-  // Update project: assign developer and change status
-  await Project.findByIdAndUpdate(proposal.project._id, {
-    assignedDeveloper: proposal.developer,
-    status: 'in_progress',
-  });
-
-  // Reject all other proposals for this project
-  await Proposal.updateMany(
-    {
-      project: proposal.project._id,
-      _id: { $ne: proposalId },
-      status: 'pending',
-    },
-    { status: 'rejected', rejectionReason: 'Project was assigned to another developer' }
-  );
-
-  return proposal.populate('developer', 'name email profilePicture');
 };
 
+/**
+ * Reject proposal
+ * @param {ObjectId} proposalId
+ * @param {ObjectId} studentId
+ * @param {string} rejectionReason
+ * @returns {Promise<Proposal>}
+ */
 const rejectProposal = async (proposalId, studentId, rejectionReason) => {
   const proposal = await getProposalById(proposalId);
 
-  // Verify the student owns the project
+  // Verify student owns the project
   if (proposal.project.student.toString() !== studentId) {
     throw new ApiError(httpStatus.FORBIDDEN, 'You do not own this project');
   }
@@ -112,11 +225,19 @@ const rejectProposal = async (proposalId, studentId, rejectionReason) => {
   return proposal;
 };
 
+/**
+ * Withdraw proposal
+ * @param {ObjectId} proposalId
+ * @param {ObjectId} developerId
+ * @returns {Promise<Proposal>}
+ */
 const withdrawProposal = async (proposalId, developerId) => {
   const proposal = await getProposalById(proposalId);
 
-  // Verify developer owns the proposal
-  if (proposal.developer.toString() !== developerId) {
+  // Verify the developer owns the proposal
+  const devId =
+    proposal.developer && proposal.developer._id ? proposal.developer._id.toString() : proposal.developer.toString();
+  if (devId !== developerId) {
     throw new ApiError(httpStatus.FORBIDDEN, 'You do not own this proposal');
   }
 
@@ -130,14 +251,41 @@ const withdrawProposal = async (proposalId, developerId) => {
   return proposal;
 };
 
+/**
+ * Get developer's proposals with pagination
+ * @param {ObjectId} developerId
+ * @param {Object} filter
+ * @param {Object} options
+ * @returns {Promise<Array>}
+ */
 const getDeveloperProposals = async (developerId, filter = {}, options = {}) => {
+  const { sortBy = 'createdAt:desc', limit = 10, page = 1 } = options;
+
+  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
   const proposals = await Proposal.find({ developer: developerId, ...filter })
-    .populate('project', 'title budget deadline status')
-    .sort(options.sortBy || { createdAt: -1 })
-    .limit(options.limit || 10)
-    .skip((options.page - 1) * (options.limit || 10) || 0);
+    .populate('project', 'id title budget deadline status')
+    .sort(sortBy)
+    .limit(parseInt(limit, 10))
+    .skip(skip)
+    .lean();
 
   return proposals;
+};
+
+/**
+ * Get proposal count for a project
+ * @param {ObjectId} projectId
+ * @param {string} status - Optional status filter
+ * @returns {Promise<number>}
+ */
+const getProposalCount = async (projectId, status = null) => {
+  const filter = { project: projectId };
+  if (status) {
+    filter.status = status;
+  }
+
+  return Proposal.countDocuments(filter);
 };
 
 module.exports = {
@@ -148,4 +296,5 @@ module.exports = {
   rejectProposal,
   withdrawProposal,
   getDeveloperProposals,
+  getProposalCount,
 };

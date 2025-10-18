@@ -33,7 +33,13 @@ router.get(
 );
 
 // View proposals for project - Only owner
-router.get('/:projectId/proposals', auth('getProjects'), verifyProjectOwnership, proposalController.getProjectProposals);
+router.get(
+  '/:projectId/proposals',
+  auth('getProjects'),
+  validate(projectValidation.getProject),
+  verifyProjectOwnership,
+  proposalController.getProjectProposals
+);
 
 // Update project - Requires ownership
 router.patch(
@@ -45,6 +51,12 @@ router.patch(
 );
 
 // Delete project - Requires ownership
-router.delete('/:projectId', auth('manageProjects'), verifyProjectOwnership, projectController.deleteProject);
+router.delete(
+  '/:projectId',
+  auth('manageProjects'),
+  validate(projectValidation.deleteProject),
+  verifyProjectOwnership,
+  projectController.deleteProject
+);
 
 module.exports = router;

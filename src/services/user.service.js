@@ -21,7 +21,7 @@ const createUser = async (userBody) => {
  * @param {string} [options.sortBy] - Sort option in the format: sortField:(desc|asc)
  * @param {number} [options.limit] - Maximum number of results per page (default = 10)
  * @param {number} [options.page] - Current page (default = 1)
- * @returns {Promise<void>}
+ * @returns {Promise<QueryResult>}
  */
 const queryUsers = async (filter, options) => {
   const users = await User.paginate(filter, options);
@@ -56,6 +56,10 @@ const updateUserById = async (userId, updateBody) => {
   const user = await getUserById(userId);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  if (updateBody.email && (await User.isEmailTaken(updateBody.email, userId))) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
 
   Object.assign(user, updateBody);

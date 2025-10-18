@@ -10,8 +10,8 @@ const pick = require('../utils/pick');
  */
 const createProject = catchAsync(async (req, res) => {
   const project = await projectService.createProject({
-    student: req.user.id,
     ...req.body,
+    student: req.user.id,
   });
 
   res.status(httpStatus.CREATED).send(project);
@@ -22,10 +22,10 @@ const createProject = catchAsync(async (req, res) => {
  * Query params: title, category, status, minBudget, maxBudget, sortBy, limit, page
  */
 const getProjects = catchAsync(async (req, res) => {
-  const filter = pick(req.query, ['title', 'category', 'status']);
+  const filter = pick(req.query, ['title', 'category', 'status', 'minBudget', 'maxBudget', 'skillsRequired']);
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
 
-  const projects = await projectService.queryProjects(filter, options);
+  const projects = await projectService.getFeaturedProjects(filter, options);
 
   res.send(projects);
 });
@@ -58,8 +58,10 @@ const getProject = catchAsync(async (req, res) => {
   // verifyProjectOwnership already checked that the user owns this project
   const project = await projectService.getProjectById(projectId);
 
+  const options = pick(req.query, ['sortBy', 'limit', 'page']);
+
   // Fetch proposals for this project
-  const proposals = await proposalService.getProposalsByProjectId(projectId);
+  const proposals = await proposalService.getProposalsByProjectId(projectId, {}, options);
 
   res.send({
     project,

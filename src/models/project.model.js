@@ -1,6 +1,7 @@
 // models/project.model.js
 const mongoose = require('mongoose');
 const { toJSON, paginate } = require('./plugins');
+const { PROJECT_STATUS } = require('../constant/projectStatus');
 
 const projectSchema = mongoose.Schema(
   {
@@ -16,12 +17,14 @@ const projectSchema = mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      minLength: 5,
       maxlength: 200,
     },
     description: {
       type: String,
       required: true,
       trim: true,
+      minLength: 20,
       maxlength: 5000,
     },
 
@@ -65,8 +68,8 @@ const projectSchema = mongoose.Schema(
     // Project status
     status: {
       type: String,
-      enum: ['open', 'in_progress', 'completed', 'cancelled'],
-      default: 'open',
+      enum: Object.values(PROJECT_STATUS),
+      default: PROJECT_STATUS.OPEN,
     },
     isFeatured: {
       type: Boolean,
@@ -96,17 +99,24 @@ const projectSchema = mongoose.Schema(
     viewCount: {
       type: Number,
       default: 0,
+      min: 0,
     },
     proposalCount: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
     // Additional metadata
     attachments: [
       {
-        fileName: String,
-        fileUrl: String,
+        fileName: { type: String, trim: true, maxlength: 255 },
+        fileUrl: {
+          type: String,
+          trim: true,
+          match: /^https?:\/\/\S+/i,
+          maxlength: 2048,
+        },
         uploadedAt: {
           type: Date,
           default: Date.now,

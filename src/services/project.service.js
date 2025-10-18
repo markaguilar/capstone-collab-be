@@ -2,6 +2,7 @@
 const httpStatus = require('http-status');
 const { Project } = require('../models');
 const { getUserById } = require('./user.service');
+const { PROJECT_STATUS, STATUS_TRANSITIONS } = require('../constant/projectStatus');
 const ApiError = require('../utils/ApiError');
 
 /**
@@ -27,7 +28,7 @@ const createProject = async (projectBody) => {
  * @param {string} [options.sortBy] - Sort option in the format: sortField:(desc|asc)
  * @param {number} [options.limit] - Maximum number of results per page (default = 10)
  * @param {number} [options.page] - Current page (default = 1)
- * @returns {Promise<Array>}
+ * @returns {Promise<{ results: any[], page: number, limit: number, totalPages: number, totalResults: number }>}
  */
 const queryProjects = async (filter = {}, options = {}) => {
   const { sortBy = 'createdAt:desc', limit = 10, page = 1, ...restOptions } = options;
@@ -53,7 +54,7 @@ const queryProjects = async (filter = {}, options = {}) => {
  */
 const getProjectById = async (projectId) => {
   const project = await Project.findById(projectId)
-    .populate('student', 'id name username profilePicture email')
+    .populate('student', 'id name username profilePicture')
     .populate('assignedDeveloper', 'id name username profilePicture portfolio');
 
   if (!project) {
@@ -66,7 +67,7 @@ const getProjectById = async (projectId) => {
 /**
  * Get project ownership info for verification
  * @param {ObjectId} projectId
- * @returns {Promise<Project>}
+ *  @returns {Promise<{ _id: string, student: string }>}
  */
 const getProjectOwnershipInfo = async (projectId) => {
   const project = await Project.findById(projectId).select('_id student').lean();
@@ -98,7 +99,7 @@ const getFeaturedProjects = async (filter = {}, options = {}) => {
     ...restOptions,
   };
 
-  return Project.paginate({ isFeatured: true, status: 'open', ...filter }, paginateOptions);
+  return Project.paginate({ isFeatured: true, status: PROJECT_STATUS.OPEN, ...filter }, paginateOptions);
 };
 
 /**
@@ -115,7 +116,7 @@ const updateProjectById = async (projectId, updateBody) => {
   }
 
   // Don't allow updating these fields
-  const restrictedFields = ['student', 'proposalCount', 'viewCount'];
+  const restrictedFields = ['student', 'proposalCount', 'viewCount', 'assignedDeveloper', 'status', 'isFeatured'];
   restrictedFields.forEach((field) => {
     // eslint-disable-next-line no-param-reassign
     delete updateBody[field];
@@ -130,7 +131,7 @@ const updateProjectById = async (projectId, updateBody) => {
 /**
  * Delete a project by id
  * @param {ObjectId} projectId
- * @returns {Promise<void>}
+ * @returns {Promise<Project>}
  */
 const deleteProjectById = async (projectId) => {
   const project = await Project.findByIdAndDelete(projectId);
@@ -146,7 +147,7 @@ const deleteProjectById = async (projectId) => {
  * Get projects by student
  * @param {ObjectId} studentId
  * @param {Object} options - Query options
- * @returns {Promise<Array>}
+ * @returns {Promise<{ results: any[], page: number, limit: number, totalPages: number, totalResults: number }>}
  */
 const getProjectsByStudentId = async (studentId, options = {}) => {
   const { sortBy = 'createdAt:desc', limit = 10, page = 1, ...restOptions } = options;
@@ -168,12 +169,20 @@ const getProjectsByStudentId = async (studentId, options = {}) => {
  * @returns {Promise<Project>}
  */
 const assignDeveloper = async (projectId, developerId) => {
+  const developer = await getUserById(developerId);
+
+  if (!developer) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Developer not found');
+  }
+
   const project = await Project.findByIdAndUpdate(
-    projectId,
     {
+      _id: projectId,
       assignedDeveloper: developerId,
-      status: 'in_progress',
+      status: PROJECT_STATUS.OPEN,
+      $or: [{ assignedDeveloper: null }, { assignedDeveloper: { $exists: false } }],
     },
+    { assignedDeveloper: developerId, status: PROJECT_STATUS.IN_PROGRESS },
     { new: true, runValidators: true }
   ).populate('assignedDeveloper', 'id name username profilePicture');
 
@@ -187,26 +196,44 @@ const assignDeveloper = async (projectId, developerId) => {
 /**
  * Update project status
  * @param {ObjectId} projectId
- * @param {string} status - 'open', 'in_progress', 'completed', 'cancelled'
+ * @param newStatus
  * @returns {Promise<Project>}
  */
-const updateProjectStatus = async (projectId, status) => {
-  const validStatuses = ['open', 'in_progress', 'completed', 'cancelled'];
-
-  if (!validStatuses.includes(status)) {
-    throw new ApiError(httpStatus.BAD_REQUEST, `Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+const updateProjectStatus = async (projectId, newStatus) => {
+  // Validate new status is valid
+  if (!Object.values(PROJECT_STATUS).includes(newStatus)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Invalid status. Must be one of: ${Object.values(PROJECT_STATUS).join(', ')}`
+    );
   }
 
-  const project = await Project.findByIdAndUpdate(projectId, { status }, { new: true, runValidators: true }).populate(
-    'student',
-    'id name username profilePicture'
-  );
+  // Fetch the current project
+  const project = await Project.findById(projectId);
 
   if (!project) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Project not found');
   }
 
-  return project;
+  const currentStatus = project.status;
+
+  // Check if the transition is valid
+  const validNextStatuses = STATUS_TRANSITIONS[currentStatus];
+
+  if (!validNextStatuses || !validNextStatuses.includes(newStatus)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Cannot transition from '${currentStatus}' to '${newStatus}'. Valid transitions: ${
+        validNextStatuses.length > 0 ? validNextStatuses.join(', ') : 'None (terminal state)'
+      }`
+    );
+  }
+
+  // Update status
+  project.status = newStatus;
+  await project.save();
+
+  return project.populate('student', 'id name username profilePicture');
 };
 
 /**
@@ -215,7 +242,11 @@ const updateProjectStatus = async (projectId, status) => {
  * @returns {Promise<void>}
  */
 const incrementViewCount = async (projectId) => {
-  await Project.findByIdAndUpdate(projectId, { $inc: { viewCount: 1 } }, { new: true });
+  const updated = await Project.findByIdAndUpdate(projectId, { $inc: { viewCount: 1 } });
+
+  if (!updated) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Project not found');
+  }
 };
 
 /**
@@ -239,7 +270,7 @@ const searchProjects = async (searchTerm, options = {}) => {
   };
 
   const searchFilter = {
-    status: 'open',
+    status: PROJECT_STATUS.OPEN,
     $or: [
       { title: { $regex: searchTerm, $options: 'i' } },
       { description: { $regex: searchTerm, $options: 'i' } },
@@ -256,7 +287,7 @@ const searchProjects = async (searchTerm, options = {}) => {
  * Get projects by category
  * @param {string} category
  * @param {Object} options - Query options
- * @returns {Promise<Array>}
+ * @returns {Promise<{ results: any[], page: number, limit: number, totalPages: number, totalResults: number }>}
  */
 const getProjectsByCategory = async (category, options = {}) => {
   const { sortBy = 'createdAt:desc', limit = 10, page = 1, ...restOptions } = options;
@@ -272,7 +303,7 @@ const getProjectsByCategory = async (category, options = {}) => {
     ...restOptions,
   };
 
-  return Project.paginate({ category, status: 'open' }, paginateOptions);
+  return Project.paginate({ category, status: PROJECT_STATUS.OPEN }, paginateOptions);
 };
 
 module.exports = {

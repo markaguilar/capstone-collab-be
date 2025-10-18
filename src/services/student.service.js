@@ -3,7 +3,8 @@ const { Student } = require('../models');
 const ApiError = require('../utils/ApiError');
 
 const getStudentByUserId = async (userId) => {
-  return Student.findById(userId);
+  // return Student.findById(userId);
+  return Student.findOne({ userId });
 };
 
 const updateStudentProfile = async (userId, updateData) => {

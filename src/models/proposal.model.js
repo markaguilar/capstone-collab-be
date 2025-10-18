@@ -52,7 +52,10 @@ const proposalSchema = mongoose.Schema(
     attachments: [
       {
         fileName: String,
-        fileUrl: String,
+        fileUrl: {
+          type: String,
+          match: /^https?:\/\/\S+$/i,
+        },
         uploadedAt: {
           type: Date,
           default: Date.now,
@@ -78,28 +81,14 @@ const proposalSchema = mongoose.Schema(
       ref: 'User',
     },
     viewedAt: Date,
-
-    // Prevent duplicates - one proposal per developer per project
-    uniqueProposal: {
-      type: String,
-      unique: true,
-      sparse: true,
-    },
   },
   {
     timestamps: true,
   }
 );
 
-// Create unique index: one developer can only propose once per project
-proposalSchema.pre('save', function (next) {
-  if (this.isNew) {
-    this.uniqueProposal = `${this.project}_${this.developer}`;
-  }
-  next();
-});
-
 // Indexes
+proposalSchema.index({ project: 1, developer: 1 }, { unique: true });
 proposalSchema.index({ project: 1, status: 1 });
 proposalSchema.index({ developer: 1, status: 1 });
 proposalSchema.index({ createdAt: -1 });
