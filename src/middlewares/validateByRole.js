@@ -10,7 +10,7 @@ const validateByRole = (req, res, next) => {
   } else if (userRole === 'developer') {
     schema = developerValidation.updateDeveloper;
   } else {
-    schema = userValidation.updateUser;
+    schema = userValidation.updateMe;
   }
 
   validate(schema)(req, res, next);

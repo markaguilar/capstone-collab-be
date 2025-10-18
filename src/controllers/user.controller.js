@@ -3,8 +3,8 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 
-const { userService, studentService } = require('../services');
-const { updateDeveloperProfile } = require('../services/developer.service');
+const { userService, studentService, developerService } = require('../services');
+const { getDeveloperByUserId } = require('../services/developer.service');
 
 const createUser = catchAsync(async (req, res) => {
   const user = await userService.createUser(req.body);
@@ -34,7 +34,6 @@ const getPublicUser = catchAsync(async (req, res) => {
   res.send({
     name: user.name,
     username: user.username,
-    email: user.email,
   });
 });
 
@@ -48,6 +47,8 @@ const getMe = catchAsync(async (req, res) => {
 
   if (user.role === 'student') {
     roleData = await studentService.getStudentByUserId(user.id);
+  } else if (user.role === 'developer') {
+    roleData = await getDeveloperByUserId(user.id);
   }
 
   res.send({ user, roleData });
@@ -63,7 +64,7 @@ const updateMe = catchAsync(async (req, res) => {
   const user = await userService.getUserById(req.user.id);
 
   // Separate common fields from role-specific fields
-  const commonFields = ['name', 'email', 'password', 'profileImage', 'bio', 'skills'];
+  const commonFields = ['name', 'email', 'username', 'profilePicture', 'bio'];
   const commonUpdates = {};
   const roleUpdates = {};
 
@@ -87,7 +88,7 @@ const updateMe = catchAsync(async (req, res) => {
     if (user.role === 'student') {
       roleData = await studentService.updateStudentProfile(req.user.id, roleUpdates);
     } else if (user.role === 'developer') {
-      roleData = await updateDeveloperProfile(req.user.id, roleUpdates);
+      roleData = await developerService.updateDeveloperProfile(req.user.id, roleUpdates);
     }
   }
 

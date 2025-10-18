@@ -7,11 +7,10 @@ const updateStudent = {
       email: Joi.string().email(),
       name: Joi.string().min(2).max(50),
       username: Joi.string()
-        .required()
         .pattern(/^[a-zA-Z0-9_-]{3,16}$/)
         .message('Username must be 3-16 characters and can only contain letters, numbers, underscores and hyphens'),
 
-      profileImage: Joi.string().uri(),
+      profilePicture: Joi.string().uri(),
       bio: Joi.string().max(500),
 
       university: Joi.string().max(100),

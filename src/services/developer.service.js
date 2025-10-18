@@ -21,7 +21,7 @@ const updateDeveloperProfile = async (userId, updateBody) => {
 };
 
 const getDeveloperProfile = async (userId) => {
-  const developer = await Developer.findOne({ userId });
+  const developer = await Developer.findOne({ userId }).lean();
   if (!developer) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Developer not found');
   }
