@@ -62,8 +62,11 @@ const updateMe = catchAsync(async (req, res) => {
 
   // Separate common fields from role-specific fields
   const commonFields = ['name', 'email', 'username', 'profilePicture', 'bio'];
-  const commonUpdates = {};
-  const roleUpdates = {};
+  const commonUpdates = pick(req.body, commonFields);
+  const roleUpdates = Object.keys(req.body).reduce((acc, key) => {
+    if (!commonFields.includes(key)) acc[key] = req.body[key];
+    return acc;
+  }, {});
 
   Object.keys(req.body).forEach((key) => {
     if (commonFields.includes(key)) {

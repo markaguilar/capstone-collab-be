@@ -12,7 +12,11 @@ const developerSchema = new mongoose.Schema(
     skills: {
       type: [String],
       default: [],
-      set: (arr) => Array.from(new Set(arr || []).map((s) => String(s).trim().toLowerCase()).filter(Boolean)),
+      set: (arr) => {
+        // eslint-disable-next-line no-nested-ternary
+        const list = Array.isArray(arr) ? arr : arr != null ? [arr] : [];
+        return Array.from(new Set(list.map((s) => String(s).trim().toLowerCase()).filter(Boolean)));
+      },
     },
     portfolio: { type: String, trim: true, match: [/^https?:\/\/\S+/i, 'portfolio must be a valid URL'] },
     applications: {
