@@ -1,4 +1,4 @@
-export default function parseSort(sortBy) {
+const parseSort = (sortBy) => {
   if (!sortBy) return '-createdAt';
   const parts = String(sortBy)
     .split(',')
@@ -9,4 +9,6 @@ export default function parseSort(sortBy) {
     return dir && dir.toLowerCase() === 'desc' ? `-${field}` : field;
   });
   return mapped.join(' ');
-}
+};
+
+module.exports = parseSort;

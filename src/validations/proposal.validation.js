@@ -46,9 +46,6 @@ const updateProposal = {
 };
 
 const getProposals = {
-  params: Joi.object().keys({
-    projectId: Joi.string().custom(objectId).required(),
-  }),
   query: Joi.object().keys({
     status: Joi.string().valid('pending', 'accepted', 'rejected', 'withdrawn'),
     sortBy: Joi.string(),
