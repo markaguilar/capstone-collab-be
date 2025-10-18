@@ -4,7 +4,6 @@ const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 
 const { userService, studentService, developerService } = require('../services');
-const { getDeveloperByUserId } = require('../services/developer.service');
 
 const createUser = catchAsync(async (req, res) => {
   const user = await userService.createUser(req.body);
@@ -34,6 +33,9 @@ const getPublicUser = catchAsync(async (req, res) => {
   res.send({
     name: user.name,
     username: user.username,
+    profilePicture: user.profilePicture,
+    bio: user.bio,
+    role: user.role,
   });
 });
 
@@ -48,16 +50,11 @@ const getMe = catchAsync(async (req, res) => {
   if (user.role === 'student') {
     roleData = await studentService.getStudentByUserId(user.id);
   } else if (user.role === 'developer') {
-    roleData = await getDeveloperByUserId(user.id);
+    roleData = await developerService.getDeveloperByUserId(user.id);
   }
 
   res.send({ user, roleData });
 });
-
-/* const updateMe = catchAsync(async (req, res) => {
-  const user = await userService.updateUserById(req.user.id, req.body);
-  res.send(user);
-}); */
 
 const updateMe = catchAsync(async (req, res) => {
   // Get user to determine role
@@ -84,12 +81,16 @@ const updateMe = catchAsync(async (req, res) => {
 
   // Update role-specific model
   let roleData = null;
-  if (Object.keys(roleUpdates).length > 0) {
-    if (user.role === 'student') {
-      roleData = await studentService.updateStudentProfile(req.user.id, roleUpdates);
-    } else if (user.role === 'developer') {
-      roleData = await developerService.updateDeveloperProfile(req.user.id, roleUpdates);
-    }
+  if (user.role === 'student') {
+    roleData =
+      Object.keys(roleUpdates).length > 0
+        ? await studentService.updateStudentProfile(req.user.id, roleUpdates)
+        : await studentService.getStudentByUserId(req.user.id);
+  } else if (user.role === 'developer') {
+    roleData =
+      Object.keys(roleUpdates).length > 0
+        ? await developerService.updateDeveloperProfile(req.user.id, roleUpdates)
+        : await developerService.getDeveloperByUserId(req.user.id);
   }
 
   res.send({

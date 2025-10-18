@@ -3,7 +3,7 @@ const { Developer } = require('../models');
 const ApiError = require('../utils/ApiError');
 
 const getDeveloperByUserId = async (userId) => {
-  return Developer.findById(userId);
+  return Developer.findById({ userId });
 };
 
 const updateDeveloperProfile = async (userId, updateBody) => {
