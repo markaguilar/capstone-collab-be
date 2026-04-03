@@ -3,11 +3,7 @@ const { Student } = require('../models');
 const ApiError = require('../utils/ApiError');
 
 const getStudentByUserId = async (userId) => {
-  const student = await Student.findOne({ userId });
-  if (!student) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Student profile not found');
-  }
-  return student;
+  return Student.findOne({ userId });
 };
 
 const updateStudentProfile = async (userId, updateData) => {

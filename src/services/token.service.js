@@ -113,7 +113,7 @@ const generateVerifyEmailToken = async (user) => {
   return verifyEmailToken;
 };
 
-const generateAuthCookies = async (tokens, rememberMe = false) => {
+const generateAuthCookies = async (tokens, rememberMe = true) => {
   const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'minutes');
   const refreshTokenExpires = moment().add(config.jwt.refreshExpirationDays, 'days');
 
